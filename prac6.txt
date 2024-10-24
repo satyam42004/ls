@@ -1,0 +1,200 @@
+Database connectivity 
+
+pip install Flask Flask-SQLAlchemy pymysql
+
+pip install Flask Flask-SQLAlchemy cx_Oracle
+
+
+
+Step-by-Step Implementation
+Create a MySQL Database:
+
+CREATE DATABASE employee_db;
+
+USE employee_db;
+
+CREATE TABLE employees (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    position VARCHAR(100),
+    salary DECIMAL(10, 2)
+);
+
+
+**Create the Flask Application:
+
+Create a folder for your project, e.g., flask_crud, and inside that folder, create a file named app.py and another folder named templates.
+
+The project structure should look like this:
+
+markdown
+Copy code
+flask_crud/
+├── app.py
+└── templates/
+    ├── add_employee.html
+    ├── edit_employee.html
+    └── index.html
+
+app.py Code:
+
+Here’s the code for the app.py file, which includes all CRUD operations:
+
+CODE:
+******************************************************************************************************************
+from flask import Flask, render_template, request, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:password@localhost/employee_db'
+# For Oracle, use:
+# app.config['SQLALCHEMY_DATABASE_URI'] = 'oracle+cx_oracle://username:password@host:port/service_name'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+class Employee(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    position = db.Column(db.String(100))
+    salary = db.Column(db.Numeric(10, 2))
+
+@app.route('/')
+def index():
+    employees = Employee.query.all()
+    return render_template('index.html', employees=employees)
+
+@app.route('/add', methods=['GET', 'POST'])
+def add_employee():
+    if request.method == 'POST':
+        name = request.form['name']
+        position = request.form['position']
+        salary = request.form['salary']
+        new_employee = Employee(name=name, position=position, salary=salary)
+        db.session.add(new_employee)
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('add_employee.html')
+
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_employee(id):
+    employee = Employee.query.get_or_404(id)
+    if request.method == 'POST':
+        employee.name = request.form['name']
+        employee.position = request.form['position']
+        employee.salary = request.form['salary']
+        db.session.commit()
+        return redirect(url_for('index'))
+    return render_template('edit_employee.html', employee=employee)
+
+@app.route('/delete/<int:id>')
+def delete_employee(id):
+    employee = Employee.query.get_or_404(id)
+    db.session.delete(employee)
+    db.session.commit()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
+    db.create_all()  # Create the database tables
+    app.run(debug=True)
+
+
+HTML Templates:
+
+Create the HTML files in the templates folder:
+
+*************************************************
+
+index.html:
+
+***************************************************
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Employee List</title>
+</head>
+<body>
+    <h1>Employee List</h1>
+    <a href="/add">Add Employee</a>
+    <table border="1">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Position</th>
+            <th>Salary</th>
+            <th>Actions</th>
+        </tr>
+        {% for employee in employees %}
+        <tr>
+            <td>{{ employee.id }}</td>
+            <td>{{ employee.name }}</td>
+            <td>{{ employee.position }}</td>
+            <td>{{ employee.salary }}</td>
+            <td>
+                <a href="/edit/{{ employee.id }}">Edit</a>
+                <a href="/delete/{{ employee.id }}">Delete</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>
+
+*****************************************************************
+add_employee.html:
+*****************************************************************
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Employee</title>
+</head>
+<body>
+    <h1>Add Employee</h1>
+    <form method="POST">
+        Name: <input type="text" name="name" required><br>
+        Position: <input type="text" name="position"><br>
+        Salary: <input type="number" step="0.01" name="salary"><br>
+        <input type="submit" value="Add Employee">
+    </form>
+    <a href="/">Back to List</a>
+</body>
+</html>
+
+***************************************************************************
+edit_employee.html:
+***************************************************************************
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Employee</title>
+</head>
+<body>
+    <h1>Edit Employee</h1>
+    <form method="POST">
+        Name: <input type="text" name="name" value="{{ employee.name }}" required><br>
+        Position: <input type="text" name="position" value="{{ employee.position }}"><br>
+        Salary: <input type="number" step="0.01" name="salary" value="{{ employee.salary }}"><br>
+        <input type="submit" value="Update Employee">
+    </form>
+    <a href="/">Back to List</a>
+</body>
+</html>
+
+
+********************************************************************************************************
+
+Step 5: Run the Application
+Make sure your MySQL server is running.
+Navigate to your project folder in the terminal and run the application:
+
+
+python app.py
+Open your web browser and go to http://127.0.0.1:5000/ to access your application.
+
+Conclusion
+You have successfully created a simple Flask web application that connects to a MySQL database, allowing you to perform CRUD operations on the employees table.
+
+You can easily adapt this example to work with an Oracle database by modifying the database URI in the app.py configuration and installing the cx_Oracle library.
